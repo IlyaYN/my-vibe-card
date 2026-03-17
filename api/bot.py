@@ -4,12 +4,8 @@ import urllib.parse
 from flask import Flask, request
 from telebot import types
 
-# Подтягиваем токен из переменных окружения Vercel
+# 1. Пытаемся достать токен из настроек Vercel
 TOKEN = os.getenv('TELEGRAM_TOKEN')
-
-# Проверка: если токен не найден, выводим предупреждение
-if not TOKEN:
-    print("❌ ОШИБКА: Переменная TELEGRAM_TOKEN не установлена в настройках Vercel!")
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
@@ -21,6 +17,7 @@ def set_main_button(chat_id):
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
+    # Эта функция сработает, когда связь наладится
     set_main_button(message.chat.id)
     user_name = message.from_user.first_name
     
@@ -54,6 +51,12 @@ def webhook():
         return 'OK', 200
     return 'Forbidden', 403
 
+# --- ТА САМАЯ ПРОВЕРКА (ТОЧКА №3) ---
 @app.route('/api/bot', methods=['GET'])
 def index():
-    return 'Бот активен и готов к работе! 🦾'
+    if TOKEN:
+        # Если код видит токен, он покажет его длину
+        return f'Бот активен! Токен найден, его длина: {len(TOKEN)} символов. 🦾'
+    else:
+        # Если токен не дошел до кода, будет эта надпись
+        return '❌ ОШИБКА: Код не видит переменную TELEGRAM_TOKEN! Проверь настройки в панели Vercel.'
