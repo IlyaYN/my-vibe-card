@@ -7,22 +7,26 @@ from telebot import types
 # Берем токен из настроек Vercel
 TOKEN = os.getenv('TELEGRAM_TOKEN')
 
-# threaded=False обязателен для работы на Vercel, чтобы не плодить лишние процессы
+# threaded=False критически важен для стабильности Serverless-функций
 bot = telebot.TeleBot(TOKEN, threaded=False)
 app = Flask(__name__)
 
+# Ссылка на твою загруженную картинку
+CARD_IMAGE_URL = 'https://my-vibe-card.vercel.app/vibe-card.jpg'
+
 @bot.message_handler(commands=['start'])
 def start_command(message):
-    """Этот обработчик теперь работает стабильно"""
+    """Отправляем фото с кнопками и текстом"""
     try:
         user_name = message.from_user.first_name
         
+        # Текст теперь будет подписью (caption) к картинке
         welcome_text = (
             f"Салют, <b>{user_name}</b>! 👋\n\n"
             f"Я — Илья. Осваиваю <b>Vibe-кодинг</b> и создаю рабочие IT-проекты с помощью ИИ. 🦾\n\n"
             f"🌍 <b>Всё в Open Source:</b>\n"
             f"Я топлю за открытость. Весь мой код, рабочие скрипты и промпты лежат в свободном доступе. Абсолютно бесплатно.\n\n"
-            f"Жми кнопку в меню, чтобы открыть визитку! 👇"
+            f"Жми кнопку ниже, чтобы открыть мою цифровую базу! 👇"
         )
         
         markup = types.InlineKeyboardMarkup(row_width=1)
@@ -38,7 +42,15 @@ def start_command(message):
         
         markup.add(btn_tg, btn_github, btn_share)
         
-        bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode='HTML')
+        # Отправляем ФОТО вместо обычного сообщения
+        bot.send_photo(
+            message.chat.id, 
+            CARD_IMAGE_URL, 
+            caption=welcome_text, 
+            reply_markup=markup, 
+            parse_mode='HTML'
+        )
+        
     except Exception as e:
         print(f"Ошибка при отправке: {e}")
 
@@ -47,8 +59,6 @@ def webhook():
     if request.headers.get('content-type') == 'application/json':
         json_string = request.get_data().decode('utf-8')
         update = telebot.types.Update.de_json(json_string)
-        
-        # Теперь просто передаем обновление в библиотеку, без ручных вызовов
         bot.process_new_updates([update])
         return 'OK', 200
     return 'Forbidden', 403
